@@ -4,23 +4,17 @@
 #include <iostream>
 
 #include <QDebug>
-#include "StereoCapture.h"
+#include "StereoCaptureActor.h"
 
 struct StereoCalibToolGUI::Impl
 {
 	Ui::ReconstClass ui;
 
-	StereoCapture stereoCapture;
+	StereoCaptureActor stereoCapture;
 
 	Impl( StereoCalibToolGUI* const obj)
 	{
 		ui.setupUi( obj );
-
-		std::cout << "Initialize" << std::endl;
-		int ret = stereoCapture.initialize();
-		if ( ret < 0 ){
-			QApplication::quit();
-		}
 
 		stereoCapture.connectCaptureImage( 
 			std::bind( &StereoCalibToolGUI::Impl::captureImage, this, std::placeholders::_1, std::placeholders::_2 ) );
