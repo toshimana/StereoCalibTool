@@ -5,57 +5,71 @@
 #include <boost/msm/back/state_machine.hpp>
 #include "WaitSync.hpp"
 
-namespace StereoCaptureStateMachine
+typedef WaitSync<cv::Mat,cv::Mat> WaitStereoCapture;
+
+struct StereoCaptureActor::Impl
 {
 	// State
 	struct StopState    : boost::msm::front::state < > {};
 	struct CaptureState : boost::msm::front::state < > {};
 
-	using namespace StereoCaptureMessage;
-
 	struct Machine_ : boost::msm::front::state_machine_def < Machine_ >
 	{
+		Machine_(StereoCaptureActor* obj):base(obj){}
+
 		// function
-		bool on_initialize( const Initialize& msg ) 
+		bool on_initialize( const StereoCaptureMessage::Initialize& msg )
 		{
 			std::cout << __FUNCTION__ << std::endl;
 			return true;
 		}
-
-		void on_capture( const Capture& msg )
+		
+		void on_capture( const StereoCaptureMessage::Capture& msg )
 		{
 			std::cout << __FUNCTION__ << std::endl;
-			
+			base->entry( StereoCaptureMessage::Capture() );
 		}
 
 		struct transition_table : boost::mpl::vector<
-			g_row < StopState,    Initialize, CaptureState, &Machine_::on_initialize >,
-			a_row < CaptureState, Capture,    CaptureState, &Machine_::on_capture >
+			g_row < StopState,    StereoCaptureMessage::Initialize, CaptureState, &on_initialize >,
+			a_row < CaptureState, StereoCaptureMessage::Capture,    CaptureState, &on_capture >
 			> {};
 
 		typedef StopState initial_state;
+
+	private:
+		std::unique_ptr<StereoCaptureActor> base;
 	};
-}
 
-typedef boost::msm::back::state_machine<StereoCaptureStateMachine::Machine_> Machine;
+	typedef boost::msm::back::state_machine<Machine_> Machine;
 
-typedef WaitSync<cv::Mat,cv::Mat> WaitStereoCapture;
+	class MessageVisitor : public boost::static_visitor < void >
+	{
+	public:
+		MessageVisitor( StereoCaptureActor* const obj ) : base( obj ){}
 
-struct StereoCaptureActor::Impl
-{
+		template<typename T>
+		void operator()( const T& msg ){
+			base->mImpl->machine.process_event( msg );
+		}
+	private:
+		std::unique_ptr<StereoCaptureActor> base;
+	};
+
 	Machine machine;
 
 	WaitStereoCapture waitStereoCapture;
 	boost::signals2::signal<void( cv::Mat, cv::Mat)> captureImage;
 
-	Impl(void)
+	Impl( StereoCaptureActor* const obj)
+		: machine( obj )
 	{
 		machine.start();
 	}
 };
 
 StereoCaptureActor::StereoCaptureActor( void )
-	:mImpl(new StereoCaptureActor::Impl())
+	:mImpl(new StereoCaptureActor::Impl( this ))
 {}
 
 StereoCaptureActor::~StereoCaptureActor( void )
@@ -72,5 +86,6 @@ StereoCaptureActor::connectCaptureImage( std::function<void( cv::Mat, cv::Mat )>
 void 
 StereoCaptureActor::processMessage( std::shared_ptr<StereoCaptureMessage::Message> msg )
 {
-
+	Impl::MessageVisitor mv( this );
+	boost::apply_visitor( mv, *msg );
 }

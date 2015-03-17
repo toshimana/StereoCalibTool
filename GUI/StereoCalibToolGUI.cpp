@@ -16,8 +16,7 @@ struct StereoCalibToolGUI::Impl
 	{
 		ui.setupUi( obj );
 
-		stereoCapture.connectCaptureImage( 
-			std::bind( &StereoCalibToolGUI::Impl::captureImage, this, std::placeholders::_1, std::placeholders::_2 ) );
+		stereoCapture.entry( StereoCaptureMessage::Initialize( 1, 2 ) );
 	}
 
 	void captureImage( const cv::Mat& leftImage, const cv::Mat& rightImage )
