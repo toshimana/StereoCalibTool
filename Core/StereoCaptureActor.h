@@ -10,9 +10,11 @@
 #define STEREOCAPTUREACTOR_API // do nothing. 
 #else // __linux__
 #ifdef STEREOCAPTUREACTOR_EXPORTS
-#define STEREOCAPTUREACTOR_API __declspec(dllexport)
+// #define STEREOCAPTUREACTOR_API __declspec(dllexport)
+#define STEREOCAPTUREACTOR_API
 #else
-#define STEREOCAPTUREACTOR_API __declspec(dllimport)
+// #define STEREOCAPTUREACTOR_API __declspec(dllimport)
+#define STEREOCAPTUREACTOR_API
 #endif
 #endif
 

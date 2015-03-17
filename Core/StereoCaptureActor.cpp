@@ -38,7 +38,7 @@ struct StereoCaptureActor::Impl
 		typedef StopState initial_state;
 
 	private:
-		std::unique_ptr<StereoCaptureActor> base;
+		StereoCaptureActor* base;
 	};
 
 	typedef boost::msm::back::state_machine<Machine_> Machine;
@@ -53,7 +53,7 @@ struct StereoCaptureActor::Impl
 			base->mImpl->machine.process_event( msg );
 		}
 	private:
-		std::unique_ptr<StereoCaptureActor> base;
+		StereoCaptureActor* base;
 	};
 
 	Machine machine;
