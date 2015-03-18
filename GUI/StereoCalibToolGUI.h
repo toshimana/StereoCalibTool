@@ -15,6 +15,9 @@ public:
 private:
 	struct Impl;
 	std::unique_ptr<Impl> mImpl;
+
+private slots:
+    void getMessage( void )const;
 };
 
 #endif // STEREOCALIBTOOLGUI_H

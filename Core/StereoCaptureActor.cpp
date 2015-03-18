@@ -3,30 +3,48 @@
 #include <boost/signals2/signal.hpp>
 #include <boost/msm/front/state_machine_def.hpp>
 #include <boost/msm/back/state_machine.hpp>
+
+#include <opencv2/highgui/highgui.hpp>
+
 #include "WaitSync.hpp"
 
 typedef WaitSync<cv::Mat,cv::Mat> WaitStereoCapture;
 
 struct StereoCaptureActor::Impl
 {
-	// State
-	struct StopState    : boost::msm::front::state < > {};
-	struct CaptureState : boost::msm::front::state < > {};
 
 	struct Machine_ : boost::msm::front::state_machine_def < Machine_ >
 	{
 		Machine_(StereoCaptureActor* obj):base(obj){}
 
+		// State
+		struct StopState : boost::msm::front::state < > {};
+
+		struct CaptureState : boost::msm::front::state < > {
+			template <class Event, class Fsm>
+			void on_entry( Event const& evt, Fsm& fsm )
+			{
+				fsm.base->entry( StereoCaptureMessage::Capture() );
+			}
+		};
+
 		// function
 		bool on_initialize( const StereoCaptureMessage::Initialize& msg )
 		{
-			std::cout << __FUNCTION__ << std::endl;
-			return true;
+			bool ret;
+			           ret = base->mImpl-> leftVideo.open( msg. leftDevice );
+			if ( ret ) ret = base->mImpl->rightVideo.open( msg.rightDevice );
+			return ret;
 		}
 		
 		void on_capture( const StereoCaptureMessage::Capture& msg )
 		{
-			std::cout << __FUNCTION__ << std::endl;
+			cv::Mat leftImage, rightImage;
+			base->mImpl->leftVideo  >> leftImage;
+			base->mImpl->rightVideo >> rightImage;
+
+			base->mImpl->captureImage( leftImage, rightImage );
+
 			base->entry( StereoCaptureMessage::Capture() );
 		}
 
@@ -58,14 +76,22 @@ struct StereoCaptureActor::Impl
 
 	Machine machine;
 
-	WaitStereoCapture waitStereoCapture;
 	boost::signals2::signal<void( cv::Mat, cv::Mat)> captureImage;
+
+	cv::VideoCapture leftVideo;
+	cv::VideoCapture rightVideo;
+
 
 	Impl( StereoCaptureActor* const obj)
 		: machine( obj )
 	{
 		machine.start();
 	}
+
+	~Impl(){
+		std::cout << __FUNCTION__ << std::endl;
+	}
+
 };
 
 StereoCaptureActor::StereoCaptureActor( void )
@@ -74,7 +100,7 @@ StereoCaptureActor::StereoCaptureActor( void )
 
 StereoCaptureActor::~StereoCaptureActor( void )
 {
-	
+	std::cout << __FUNCTION__ << std::endl;
 }
 
 void 
