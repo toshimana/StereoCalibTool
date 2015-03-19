@@ -36,6 +36,12 @@ struct StereoCaptureActor::Impl
 			if ( ret ) ret = base->mImpl->rightVideo.open( msg.rightDevice );
 			return ret;
 		}
+
+		void on_finalize( const StereoCaptureMessage::Finalize& msg )
+		{
+			base->mImpl-> leftVideo.release();
+			base->mImpl->rightVideo.release();
+		}
 		
 		void on_capture( const StereoCaptureMessage::Capture& msg )
 		{
@@ -50,7 +56,8 @@ struct StereoCaptureActor::Impl
 
 		struct transition_table : boost::mpl::vector<
 			g_row < StopState,    StereoCaptureMessage::Initialize, CaptureState, &on_initialize >,
-			a_row < CaptureState, StereoCaptureMessage::Capture,    CaptureState, &on_capture >
+			a_row < CaptureState, StereoCaptureMessage::Capture,    CaptureState, &on_capture >,
+			a_row < CaptureState, StereoCaptureMessage::Finalize,   StopState,    &on_finalize >
 			> {};
 
 		typedef StopState initial_state;
@@ -101,6 +108,21 @@ StereoCaptureActor::StereoCaptureActor( void )
 StereoCaptureActor::~StereoCaptureActor( void )
 {
 	std::cout << __FUNCTION__ << std::endl;
+}
+
+const int*
+StereoCaptureActor::getState( void )const
+{
+	return mImpl->machine.current_state();
+}
+
+void
+StereoCaptureActor::finalize( void )
+{
+	entry( StereoCaptureMessage::Finalize() );
+	while ( *getState() != 0 ) {
+		boost::this_thread::sleep_for( boost::chrono::milliseconds( 1 ) );
+	}
 }
 
 void 

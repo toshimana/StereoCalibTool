@@ -32,7 +32,11 @@ namespace StereoCaptureMessage
 	{
 	};
 
-	typedef boost::variant<Initialize, Capture> Message;
+	struct Finalize
+	{
+	};
+
+	typedef boost::variant<Initialize, Capture, Finalize> Message;
 };
 
 class StereoCaptureActor : public Actor<StereoCaptureMessage::Message>
@@ -40,6 +44,10 @@ class StereoCaptureActor : public Actor<StereoCaptureMessage::Message>
 public:
 	STEREOCAPTUREACTOR_API StereoCaptureActor( void );
 	STEREOCAPTUREACTOR_API ~StereoCaptureActor( void );
+
+	const int* getState( void )const;
+
+	void finalize( void );
 
 	STEREOCAPTUREACTOR_API void connectCaptureImage( std::function<void(cv::Mat,cv::Mat)> func );
 
