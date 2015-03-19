@@ -6,6 +6,7 @@
 #include <Qtimer>
 #include <QDebug>
 #include "StereoCaptureActor.h"
+#include "FindStereoFeaturesActor.h"
 #include <MainActor.hpp>
 
 struct StereoCalibToolGUI::Impl
@@ -15,6 +16,7 @@ struct StereoCalibToolGUI::Impl
 	Ui::ReconstClass ui;
 	MainActor mActor;
 	StereoCaptureActor stereoCapture;
+	FindStereoFeaturesActor findStereoFeaturesActor;
 	QTimer timer;
 
 	Impl( StereoCalibToolGUI* const obj)
