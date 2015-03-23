@@ -1,19 +1,18 @@
 #pragma once
 
-#include <memory>
 #include <functional>
-#include <opencv2/core/core.hpp>
 
 #include <Actor.hpp>
+#include "CornerInfo.h"
 
 namespace FindFeaturesMessage
 {
 	struct Find
 	{
-		Find( const cv::Mat& _image, std::function<void( std::shared_ptr<std::vector<cv::Point2f> > )> func )
+		Find( const cv::Mat& _image, std::function<void( CornerInfo )> func )
 			: image( _image ), deligate( func ){}
 		const cv::Mat image;
-		std::function<void( std::shared_ptr<std::vector<cv::Point2f> > )> deligate;
+		std::function<void(CornerInfo)> deligate;
 	};
 
 	typedef boost::variant<Find> Message;

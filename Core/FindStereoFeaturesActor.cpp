@@ -4,6 +4,8 @@
 
 #include "FindFeaturesActor.h"
 
+#include "WaitSync.hpp"
+
 struct FindStereoFeaturesActor::Impl
 {
 	class MessageVisitor : public boost::static_visitor < void >
@@ -12,10 +14,23 @@ struct FindStereoFeaturesActor::Impl
 		MessageVisitor( FindStereoFeaturesActor* const obj ) : base( obj ){}
 
 		void operator()( const FindStereoFeaturesMessage::Find& msg ){
+			using namespace FindStereoFeaturesMessage;
 
+			typedef WaitSync<CornerInfo, CornerInfo> WaitStereoCornerInfo;
+			std::shared_ptr<WaitStereoCornerInfo> ws = std::make_shared<WaitStereoCornerInfo>();
+			ws->connectSync( std::bind( &FindStereoFeaturesActor::Impl::MessageVisitor::filter, this, std::placeholders::_1, std::placeholders::_2, msg.deligate ) );
+			base->mImpl-> leftFindFeaturesActor.entry( FindFeaturesMessage::Find( msg. leftImage, [ws]( CornerInfo cornerInfo ){ ws->setFirst ( cornerInfo ); } ) );
+			base->mImpl->rightFindFeaturesActor.entry( FindFeaturesMessage::Find( msg.rightImage, [ws]( CornerInfo cornerInfo ){ ws->setSecond( cornerInfo ); } ) );
 		}
 	private:
 		FindStereoFeaturesActor* base;
+
+		void filter( CornerInfo left, CornerInfo right, std::function<void(CornerInfo,CornerInfo)> deligate )
+		{
+			if ( left.isEnable() && right.isEnable() ) {
+				deligate( left, right );
+			}
+		}
 	};
 
 	Impl( FindStereoFeaturesActor* const obj)

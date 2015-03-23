@@ -15,9 +15,11 @@ struct FindFeaturesActor::Impl
 		MessageVisitor( FindFeaturesActor* const obj ) : base( obj ){}
 
 		void operator()( const FindFeaturesMessage::Find& msg ){
+			cv::Size patternSize( 11, 9 );
+
 			std::shared_ptr<std::vector<cv::Point2f> > corners = std::make_shared<std::vector<cv::Point2f> >();
 			bool patternFound = 
-				cv::findChessboardCorners( msg.image, cv::Size( 11, 9 ), *corners,
+				cv::findChessboardCorners( msg.image, patternSize, *corners,
 				cv::CALIB_CB_ADAPTIVE_THRESH + cv::CALIB_CB_NORMALIZE_IMAGE );
 
 			if ( patternFound ) {
@@ -25,7 +27,7 @@ struct FindFeaturesActor::Impl
 					cv::TermCriteria( cv::TermCriteria::EPS | cv::TermCriteria::COUNT, 20, 1.0 ) );
 			}
 
-			msg.deligate( corners );
+			msg.deligate( CornerInfo( patternSize, corners, patternFound ) );
 		}
 	private:
 		FindFeaturesActor* base;
@@ -37,9 +39,6 @@ struct FindFeaturesActor::Impl
 
 	~Impl(){
 	}
-
-	FindFeaturesActor  leftFindFeaturesActor;
-	FindFeaturesActor rightFindFeaturesActor;
 };
 
 FindFeaturesActor::FindFeaturesActor( void )

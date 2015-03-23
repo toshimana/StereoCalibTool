@@ -9,9 +9,14 @@
 #include "FindStereoFeaturesActor.h"
 #include <MainActor.hpp>
 
+#include <opencv2/calib3d/calib3d.hpp>
+
 struct StereoCalibToolGUI::Impl
 {
 	StereoCalibToolGUI* const base;
+
+	typedef std::vector<cv::Point2f> Corners;
+	typedef std::shared_ptr<Corners> SpCorners;
 
 	Ui::ReconstClass ui;
 	MainActor mActor;
@@ -29,6 +34,16 @@ struct StereoCalibToolGUI::Impl
 				this->captureImage( leftImage, rightImage );
 			}
 				) );
+			this->findStereoFeaturesActor.entry( FindStereoFeaturesMessage::Find( leftImage, rightImage, 
+				[this, leftImage, rightImage]( CornerInfo leftInfo, CornerInfo rightInfo ){
+				this->mActor.entry( MainActorMessage::ExecFunc( [this, leftImage, leftInfo]( void ){
+					findFeatures( leftImage, leftInfo, this->ui.LeftFeatureImageWidget );
+				} ) );
+				this->mActor.entry( MainActorMessage::ExecFunc( [this, rightImage, rightInfo]( void ){
+					findFeatures( rightImage, rightInfo, this->ui.RightFeatureImageWidget );
+				} ) );
+			}
+			) );
 		} );
 
 		stereoCapture.entry( StereoCaptureMessage::Initialize( 2, 1 ) );
@@ -48,6 +63,12 @@ struct StereoCalibToolGUI::Impl
 		ui.RightImageWidget->setImage( rightImage );
 	}
 
+	void findFeatures( const cv::Mat& image, CornerInfo info, ImageWidget* widget )
+	{
+		cv::Mat canvas = image.clone();
+		cv::drawChessboardCorners( canvas, info.patternSize, *(info.corners), info.patternWasFound );
+		widget->setImage( canvas );
+	}
 };
 
 StereoCalibToolGUI::StereoCalibToolGUI(QWidget *parent)
