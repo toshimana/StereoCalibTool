@@ -54,6 +54,7 @@ struct StereoCalibToolGUI::Impl
 
 	~Impl(){
 		std::cout << __FUNCTION__ << std::endl;
+		findStereoFeaturesActor.finalize();
 		stereoCapture.finalize();
 	}
 

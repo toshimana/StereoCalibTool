@@ -15,7 +15,7 @@ struct FindFeaturesActor::Impl
 		MessageVisitor( FindFeaturesActor* const obj ) : base( obj ){}
 
 		void operator()( const FindFeaturesMessage::Find& msg ){
-			cv::Size patternSize( 11, 9 );
+			cv::Size patternSize( 12, 8 );
 
 			std::shared_ptr<std::vector<cv::Point2f> > corners = std::make_shared<std::vector<cv::Point2f> >();
 			bool patternFound = 

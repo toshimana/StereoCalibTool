@@ -6,10 +6,6 @@
 
 #include <opencv2/videoio/videoio.hpp>
 
-#include "WaitSync.hpp"
-
-typedef WaitSync<cv::Mat,cv::Mat> WaitStereoCapture;
-
 struct StereoCaptureActor::Impl
 {
 
@@ -54,6 +50,7 @@ struct StereoCaptureActor::Impl
 			base->entry( StereoCaptureMessage::Capture() );
 		}
 
+		// Transition
 		struct transition_table : boost::mpl::vector<
 			g_row < StopState,    StereoCaptureMessage::Initialize, CaptureState, &on_initialize >,
 			a_row < CaptureState, StereoCaptureMessage::Capture,    CaptureState, &on_capture >,
@@ -61,6 +58,13 @@ struct StereoCaptureActor::Impl
 			> {};
 
 		typedef StopState initial_state;
+
+	protected:
+		template <class FSM, class Event>
+		void no_transition( Event const&, FSM&, int )
+		{
+			// do nothing.
+		}
 
 	private:
 		StereoCaptureActor* base;

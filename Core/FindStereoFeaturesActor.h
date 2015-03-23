@@ -18,7 +18,10 @@ namespace FindStereoFeaturesMessage
 		std::function<void( CornerInfo, CornerInfo )> deligate;
 	};
 
-	typedef boost::variant<Find> Message;
+	struct Calculated{};
+	struct Finalize{};
+
+	typedef boost::variant<Find,Calculated,Finalize> Message;
 };
 
 class FindStereoFeaturesActor : public Actor<FindStereoFeaturesMessage::Message>
@@ -26,6 +29,10 @@ class FindStereoFeaturesActor : public Actor<FindStereoFeaturesMessage::Message>
 public:
 	FindStereoFeaturesActor( void );
 	~FindStereoFeaturesActor( void );
+
+	const int* getState( void )const;
+
+	void finalize( void );
 
 private:
 	struct Impl;
