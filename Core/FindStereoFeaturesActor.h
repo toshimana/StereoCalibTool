@@ -12,13 +12,21 @@ namespace FindStereoFeaturesMessage
 	struct Find
 	{
 		Find( const cv::Mat& left, const cv::Mat& right, std::function<void(CornerInfo,CornerInfo)> func ) 
-			: leftImage( left ), rightImage( right ){}
+			: leftImage(left), rightImage(right), deligate(func){}
 		const cv::Mat leftImage;
 		const cv::Mat rightImage;
 		std::function<void( CornerInfo, CornerInfo )> deligate;
 	};
 
-	struct Calculated{};
+	struct Calculated
+	{
+		Calculated(CornerInfo left, CornerInfo right, std::function<void(CornerInfo,CornerInfo)> func )
+			: leftInfo(left), rightInfo(right), deligate(func){}
+		const CornerInfo leftInfo;
+		const CornerInfo rightInfo;
+		std::function<void( CornerInfo, CornerInfo )> deligate;
+	};
+
 	struct Finalize{};
 
 	typedef boost::variant<Find,Calculated,Finalize> Message;

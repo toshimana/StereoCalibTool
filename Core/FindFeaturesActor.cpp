@@ -6,6 +6,7 @@
 #include <opencv2/calib3d/calib3d.hpp>
 
 #include "FindFeaturesActor.h"
+#include "cvtool.hpp"
 
 struct FindFeaturesActor::Impl
 {
@@ -16,14 +17,16 @@ struct FindFeaturesActor::Impl
 
 		void operator()( const FindFeaturesMessage::Find& msg ){
 			cv::Size patternSize( 12, 8 );
+			cv::Mat grayImage;
+			cvtool::cvtColor2Gray( msg.image, grayImage );
 
 			std::shared_ptr<std::vector<cv::Point2f> > corners = std::make_shared<std::vector<cv::Point2f> >();
 			bool patternFound = 
-				cv::findChessboardCorners( msg.image, patternSize, *corners,
+				cv::findChessboardCorners( grayImage, patternSize, *corners,
 				cv::CALIB_CB_ADAPTIVE_THRESH + cv::CALIB_CB_NORMALIZE_IMAGE );
 
 			if ( patternFound ) {
-				cv::cornerSubPix( msg.image, *corners, cv::Size( 5, 5 ), cv::Size( -1, -1 ),
+				cv::cornerSubPix( grayImage, *corners, cv::Size( 5, 5 ), cv::Size( -1, -1 ),
 					cv::TermCriteria( cv::TermCriteria::EPS | cv::TermCriteria::COUNT, 20, 1.0 ) );
 			}
 

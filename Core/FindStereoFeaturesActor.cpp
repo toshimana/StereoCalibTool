@@ -26,15 +26,21 @@ struct FindStereoFeaturesActor::Impl
 
 			typedef WaitSync<CornerInfo, CornerInfo> WaitStereoCornerInfo;
 			std::shared_ptr<WaitStereoCornerInfo> ws = std::make_shared<WaitStereoCornerInfo>();
-			ws->connectSync( std::bind( &FindStereoFeaturesActor::Impl::Machine_::filter, this, std::placeholders::_1, std::placeholders::_2, msg.deligate ) );
+			ws->connectSync( [this,msg]( CornerInfo left, CornerInfo right ){ this->base->entry( Calculated::Calculated(left,right,msg.deligate) ); } );
+
 			base->mImpl-> leftFindFeaturesActor.entry( FindFeaturesMessage::Find( msg. leftImage, [ws]( CornerInfo cornerInfo ){ ws->setFirst ( cornerInfo ); } ) );
 			base->mImpl->rightFindFeaturesActor.entry( FindFeaturesMessage::Find( msg.rightImage, [ws]( CornerInfo cornerInfo ){ ws->setSecond( cornerInfo ); } ) );
+		}
+
+		void on_calculated( const FindStereoFeaturesMessage::Calculated& msg )
+		{
+			filter( msg.leftInfo, msg.rightInfo, msg.deligate );
 		}
 
 		// Transition
 		struct transition_table : boost::mpl::vector<
 			a_row < WaitState, FindStereoFeaturesMessage::Find,       ProcState, &on_find >,
-			 _row < ProcState, FindStereoFeaturesMessage::Calculated, WaitState>,
+			a_row < ProcState, FindStereoFeaturesMessage::Calculated, WaitState, &on_calculated>,
 			 _row < WaitState, FindStereoFeaturesMessage::Finalize,   HaltState>,
 			 _row < ProcState, FindStereoFeaturesMessage::Finalize,   HaltState>
 			> {};
@@ -56,7 +62,6 @@ struct FindStereoFeaturesActor::Impl
 		{
 			if ( left.isEnable() && right.isEnable() ) {
 				deligate( left, right );
-				this->base->entry( FindStereoFeaturesMessage::Calculated() );
 			}
 			else {
 				if ( left .isEnable() ) std::cout << "Left  Features Found." << std::endl;
