@@ -4,9 +4,33 @@
 #include <boost/msm/front/state_machine_def.hpp>
 #include <boost/msm/back/state_machine.hpp>
 
-#include "FindFeaturesActor.h"
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/calib3d/calib3d.hpp>
 
-#include "WaitSync.hpp"
+#include <cvtool.hpp>
+#include "CornerInfo.h"
+
+typedef std::shared_ptr<CornerInfo> SpCornerInfo;
+
+static void 
+findCorner( const cv::Mat& image, SpCornerInfo& info )
+{
+	cv::Size patternSize( 12, 8 );
+	cv::Mat grayImage;
+	cvtool::cvtColor2Gray( image, grayImage );
+	
+	std::shared_ptr<std::vector<cv::Point2f> > corners = std::make_shared<std::vector<cv::Point2f> >();
+	bool patternFound =
+		cv::findChessboardCorners( grayImage, patternSize, *corners,
+		cv::CALIB_CB_ADAPTIVE_THRESH + cv::CALIB_CB_NORMALIZE_IMAGE );
+	
+	if ( patternFound ) {
+		cv::cornerSubPix( grayImage, *corners, cv::Size( 5, 5 ), cv::Size( -1, -1 ),
+			cv::TermCriteria( cv::TermCriteria::EPS | cv::TermCriteria::COUNT, 20, 1.0 ) );
+	}
+
+	info = std::make_shared<CornerInfo>( patternSize, corners, patternFound );
+}
 
 struct FindStereoFeaturesActor::Impl
 {
@@ -22,19 +46,27 @@ struct FindStereoFeaturesActor::Impl
 		// Function
 		void on_find( const FindStereoFeaturesMessage::Find& msg )
 		{
-			using namespace FindStereoFeaturesMessage;
+			SpCornerInfo leftInfo, rightInfo;
 
-			typedef WaitSync<CornerInfo, CornerInfo> WaitStereoCornerInfo;
-			std::shared_ptr<WaitStereoCornerInfo> ws = std::make_shared<WaitStereoCornerInfo>();
-			ws->connectSync( [this,msg]( CornerInfo left, CornerInfo right ){ this->base->entry( Calculated::Calculated(left,right,msg.deligate) ); } );
+#pragma omp parallel
+#pragma omp sections
+			{
+#pragma omp section
+			{
+				findCorner( msg.leftImage, leftInfo );
+			}
+#pragma omp section
+			{
+				findCorner( msg.rightImage, rightInfo );
+			}
+			}
 
-			base->mImpl-> leftFindFeaturesActor.entry( FindFeaturesMessage::Find( msg. leftImage, [ws]( CornerInfo cornerInfo ){ ws->setFirst ( cornerInfo ); } ) );
-			base->mImpl->rightFindFeaturesActor.entry( FindFeaturesMessage::Find( msg.rightImage, [ws]( CornerInfo cornerInfo ){ ws->setSecond( cornerInfo ); } ) );
+			base->entry( FindStereoFeaturesMessage::Calculated( *leftInfo, *rightInfo, msg.deligate ) );
 		}
 
 		void on_calculated( const FindStereoFeaturesMessage::Calculated& msg )
 		{
-			filter( msg.leftInfo, msg.rightInfo, msg.deligate );
+			msg.deligate( msg.leftInfo, msg.rightInfo );
 		}
 
 		// Transition
@@ -57,17 +89,6 @@ struct FindStereoFeaturesActor::Impl
 
 	private:
 		FindStereoFeaturesActor* base;
-
-		void filter( CornerInfo left, CornerInfo right, std::function<void(CornerInfo,CornerInfo)> deligate )
-		{
-			if ( left.isEnable() && right.isEnable() ) {
-				deligate( left, right );
-			}
-			else {
-				if ( left .isEnable() ) std::cout << "Left  Features Found." << std::endl;
-				if ( right.isEnable() ) std::cout << "Right Features Found." << std::endl;
-			}
-		}
 	};
 
 	typedef boost::msm::back::state_machine<Machine_> Machine;
@@ -96,9 +117,6 @@ struct FindStereoFeaturesActor::Impl
 	}
 
 	Machine machine;
-
-	FindFeaturesActor  leftFindFeaturesActor;
-	FindFeaturesActor rightFindFeaturesActor;
 };
 
 FindStereoFeaturesActor::FindStereoFeaturesActor( void )
