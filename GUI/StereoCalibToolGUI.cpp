@@ -76,7 +76,7 @@ struct StereoCalibToolGUI::Impl
 		ui.RightImageWidget->setImage( rightImage );
 	}
 
-	void findFeatures( const cv::Mat& image, CornerInfo info, ImageWidget* widget )
+	void findFeatures( const cv::Mat& image, CornerInfo info, ImageFitWidget* widget )
 	{
 		cv::Mat canvas = image.clone();
 		cv::drawChessboardCorners( canvas, info.patternSize, *(info.corners), info.patternWasFound );

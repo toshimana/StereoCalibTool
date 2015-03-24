@@ -16,16 +16,16 @@
   <widget class="QWidget" name="centralWidget">
    <layout class="QGridLayout" name="gridLayout">
     <item row="0" column="0">
-     <widget class="ImageWidget" name="LeftImageWidget" native="true"/>
+     <widget class="ImageFitWidget" name="LeftImageWidget" native="true"/>
     </item>
     <item row="0" column="1">
-     <widget class="ImageWidget" name="RightImageWidget" native="true"/>
+     <widget class="ImageFitWidget" name="RightImageWidget" native="true"/>
     </item>
     <item row="1" column="0">
-     <widget class="ImageWidget" name="LeftFeatureImageWidget" native="true"/>
+     <widget class="ImageFitWidget" name="LeftFeatureImageWidget" native="true"/>
     </item>
     <item row="1" column="1">
-     <widget class="ImageWidget" name="RightFeatureImageWidget" native="true"/>
+     <widget class="ImageFitWidget" name="RightFeatureImageWidget" native="true"/>
     </item>
    </layout>
   </widget>
@@ -33,9 +33,9 @@
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
   <customwidget>
-   <class>ImageWidget</class>
+   <class>ImageFitWidget</class>
    <extends>QWidget</extends>
-   <header>ImageWidget.h</header>
+   <header>ImageFitWidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
