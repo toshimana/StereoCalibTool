@@ -10,18 +10,20 @@
 #include <MainActor.hpp>
 
 #include <opencv2/calib3d/calib3d.hpp>
+#include "WaitSync.hpp"
+#include "CornerInfo.h"
 
 struct StereoCalibToolGUI::Impl
 {
 	StereoCalibToolGUI* const base;
 
-	typedef std::vector<cv::Point2f> Corners;
-	typedef std::shared_ptr<Corners> SpCorners;
+	typedef std::pair<cv::Mat, cv::Mat> StereoMat;
 
 	Ui::ReconstClass ui;
 	MainActor mActor;
 	StereoCaptureActor stereoCapture;
 	FindStereoFeaturesActor findStereoFeaturesActor;
+	WaitSync<bool, StereoMat> waitFSFA;
 	QTimer timer;
 
 	Impl( StereoCalibToolGUI* const obj)
@@ -29,21 +31,32 @@ struct StereoCalibToolGUI::Impl
 	{
 		ui.setupUi( obj );
 
+
+		waitFSFA.connectSync( [this]( bool calcedFlag, StereoMat stereoMat ){
+			// findStereoFeaturesActor‚É“Á’¥’Tõ‚ðŽÀŽ{‚·‚éMSG‚ð‘—‚é
+			const cv::Mat  leftImage = stereoMat.first;
+			const cv::Mat rightImage = stereoMat.second;
+			findStereoFeaturesActor.entry( FindStereoFeaturesMessage::Find( leftImage, rightImage,
+				// Œ‹‰Ê‚ªŠ®—¹‚µ‚½Œã‚Ìˆ—‚ð“o˜^‚·‚é
+				[this, leftImage, rightImage]( CornerInfo leftInfo, CornerInfo rightInfo ){
+				waitFSFA.setFirst( true );
+				// ƒƒCƒ“ƒXƒŒƒbƒh‚É•`‰æ–½—ß‚ð‘—‚é
+				mActor.entry( MainActorMessage::ExecFunc( [this, leftImage, leftInfo, rightImage, rightInfo]( void ){
+					if ( leftInfo.isEnable() && rightInfo.isEnable() ) {
+						findFeatures( leftImage, leftInfo, ui.LeftFeatureImageWidget );
+						findFeatures( rightImage, rightInfo, ui.RightFeatureImageWidget );
+					}
+				} ) );
+			} ) );
+		} );
+		waitFSFA.setFirst( true ); // ‰‰ñ‚ÍŠù‚ÉFSFA‚Ìˆ—‚ªŠ®—¹‚µ‚Ä‚¢‚é‚à‚Ì‚Æ‚·‚é
+		
 		stereoCapture.connectCaptureImage( [this]( const cv::Mat leftImage, const cv::Mat rightImage ){
 			this->mActor.entry( MainActorMessage::ExecFunc( [this, leftImage, rightImage]( void ){
 				this->captureImage( leftImage, rightImage );
 			}
-				) );
-			this->findStereoFeaturesActor.entry( FindStereoFeaturesMessage::Find( leftImage, rightImage, 
-				[this, leftImage, rightImage]( CornerInfo leftInfo, CornerInfo rightInfo ){
-				this->mActor.entry( MainActorMessage::ExecFunc( [this, leftImage, leftInfo]( void ){
-					findFeatures( leftImage, leftInfo, this->ui.LeftFeatureImageWidget );
-				} ) );
-				this->mActor.entry( MainActorMessage::ExecFunc( [this, rightImage, rightInfo]( void ){
-					findFeatures( rightImage, rightInfo, this->ui.RightFeatureImageWidget );
-				} ) );
-			}
 			) );
+			waitFSFA.setSecond( std::make_pair( leftImage, rightImage ) );
 		} );
 
 		stereoCapture.entry( StereoCaptureMessage::Initialize( 2, 1 ) );
@@ -53,9 +66,8 @@ struct StereoCalibToolGUI::Impl
 	}
 
 	~Impl(){
-		std::cout << __FUNCTION__ << std::endl;
-		findStereoFeaturesActor.finalize();
 		stereoCapture.finalize();
+		findStereoFeaturesActor.finalize();
 	}
 
 	void captureImage( const cv::Mat& leftImage, const cv::Mat& rightImage )
