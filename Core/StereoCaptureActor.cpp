@@ -46,8 +46,6 @@ struct StereoCaptureActor::Impl
 			base->mImpl->rightVideo >> rightImage;
 
 			base->mImpl->captureImage( leftImage, rightImage );
-
-			base->entry( StereoCaptureMessage::Capture() );
 		}
 
 		// Transition
