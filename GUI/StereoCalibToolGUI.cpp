@@ -5,11 +5,16 @@
 
 #include <Qtimer>
 #include <QDebug>
+
+#include <boost/msm/front/state_machine_def.hpp>
+#include <boost/msm/back/state_machine.hpp>
+#include <opencv2/calib3d/calib3d.hpp>
+
+
 #include "StereoCaptureActor.h"
 #include "FindStereoFeaturesActor.h"
 #include <MainActor.hpp>
 
-#include <opencv2/calib3d/calib3d.hpp>
 #include "WaitSync.hpp"
 #include "CornerInfo.h"
 
@@ -26,11 +31,40 @@ struct StereoCalibToolGUI::Impl
 	WaitSync<bool, StereoMat> waitFSFA;
 	QTimer timer;
 
+	struct Machine_ : boost::msm::front::state_machine_def < Machine_ >
+	{
+		Machine_( StereoCalibToolGUI* obj ) :base( obj ){}
+
+		// State
+		struct CaptureState : boost::msm::front::state < > {};
+		struct StoreState   : boost::msm::front::state < > {};
+
+		// Event
+		struct StoreEvent{};
+
+		// Function
+
+		// Transition
+		struct transition_table : boost::mpl::vector <
+			_row < CaptureState, StoreEvent, StoreState >
+		> {};
+
+		typedef CaptureState initial_state;
+
+	private:
+		StereoCalibToolGUI* base;
+	};
+
+	typedef boost::msm::back::state_machine<Machine_> Machine;
+
+	Machine machine;
+
 	Impl( StereoCalibToolGUI* const obj)
 		: base( obj )
+		, machine( obj )
 	{
 		ui.setupUi( obj );
-
+		machine.start();
 
 		waitFSFA.connectSync( [this]( bool calcedFlag, StereoMat stereoMat ){
 			// findStereoFeaturesActor‚É“Á’¥’Tõ‚ðŽÀŽ{‚·‚éMSG‚ð‘—‚é
@@ -60,6 +94,8 @@ struct StereoCalibToolGUI::Impl
 		} );
 
 		stereoCapture.entry( StereoCaptureMessage::Initialize( 2, 1 ) );
+
+		ui.StoreButton->connectPressed( [](){ std::cout << "Push!" << std::endl; } );
 
 		connect( &timer, SIGNAL( timeout() ), base, SLOT( getMessage() ) );
 		timer.start( 10 );

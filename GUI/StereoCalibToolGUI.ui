@@ -31,7 +31,7 @@
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_2">
           <item>
-           <widget class="QPushButton" name="StoreButton">
+           <widget class="ObservedPushButton" name="StoreButton">
             <property name="text">
              <string>Store</string>
             </property>
@@ -72,6 +72,11 @@
    <extends>QWidget</extends>
    <header>ImageFitWidget.h</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ObservedPushButton</class>
+   <extends>QPushButton</extends>
+   <header>ObservedPushButton.h</header>
   </customwidget>
  </customwidgets>
  <resources>
