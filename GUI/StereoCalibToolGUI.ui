@@ -26,7 +26,7 @@
        </property>
        <layout class="QVBoxLayout" name="verticalLayout">
         <item>
-         <widget class="QListView" name="ImageListWidget"/>
+         <widget class="ImageListWidget" name="FeaturesListWidget"/>
         </item>
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_2">
@@ -77,6 +77,11 @@
    <class>ObservedPushButton</class>
    <extends>QPushButton</extends>
    <header>ObservedPushButton.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ImageListWidget</class>
+   <extends>QListWidget</extends>
+   <header>ImageListWidget.h</header>
   </customwidget>
  </customwidgets>
  <resources>

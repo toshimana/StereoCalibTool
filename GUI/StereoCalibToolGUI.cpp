@@ -36,8 +36,20 @@ struct StereoCalibToolGUI::Impl
 		Machine_( StereoCalibToolGUI* obj ) :base( obj ){}
 
 		// State
-		struct CaptureState : boost::msm::front::state < > {};
-		struct StoreState   : boost::msm::front::state < > {};
+		struct CaptureState : boost::msm::front::state < > {
+			template <class Event, class Fsm>
+			void on_entry( Event const& evt, Fsm& fsm )
+			{
+				fsm.base->mImpl->ui.StoreButton->setText( "Store" );
+			}
+		};
+		struct StoreState   : boost::msm::front::state < > {
+			template <class Event, class Fsm>
+			void on_entry( Event const& evt, Fsm& fsm )
+			{
+				fsm.base->mImpl->ui.StoreButton->setText( "Stop" );
+			}
+		};
 
 		// Event
 		struct StoreEvent{};
@@ -46,8 +58,14 @@ struct StereoCalibToolGUI::Impl
 
 		// Transition
 		struct transition_table : boost::mpl::vector <
-			_row < CaptureState, StoreEvent, StoreState >
+			_row < CaptureState, StoreEvent, StoreState   >,
+			_row < StoreState,   StoreEvent, CaptureState >
 		> {};
+
+		enum STATE_ID {
+			CAPTURE_STATE_ID = 0,
+			STORE_STATE_ID,
+		};
 
 		typedef CaptureState initial_state;
 
@@ -64,7 +82,6 @@ struct StereoCalibToolGUI::Impl
 		, machine( obj )
 	{
 		ui.setupUi( obj );
-		machine.start();
 
 		waitFSFA.connectSync( [this]( bool calcedFlag, StereoMat stereoMat ){
 			// findStereoFeaturesActor‚É“Á’¥’Tõ‚ðŽÀŽ{‚·‚éMSG‚ð‘—‚é
@@ -75,12 +92,7 @@ struct StereoCalibToolGUI::Impl
 				[this, leftImage, rightImage]( CornerInfo leftInfo, CornerInfo rightInfo ){
 				waitFSFA.setFirst( true );
 				// ƒƒCƒ“ƒXƒŒƒbƒh‚É•`‰æ–½—ß‚ð‘—‚é
-				mActor.entry( MainActorMessage::ExecFunc( [this, leftImage, leftInfo, rightImage, rightInfo]( void ){
-					if ( leftInfo.isEnable() && rightInfo.isEnable() ) {
-						findFeatures( leftImage, leftInfo, ui.LeftFeatureImageWidget );
-						findFeatures( rightImage, rightInfo, ui.RightFeatureImageWidget );
-					}
-				} ) );
+				mActor.entry( MainActorMessage::ExecFunc( std::bind(&StereoCalibToolGUI::Impl::findStereoFeatures, this, leftImage, leftInfo, rightImage, rightInfo ) ) );
 			} ) );
 		} );
 		waitFSFA.setFirst( true ); // ‰‰ñ‚ÍŠù‚ÉFSFA‚Ìˆ—‚ªŠ®—¹‚µ‚Ä‚¢‚é‚à‚Ì‚Æ‚·‚é
@@ -95,7 +107,9 @@ struct StereoCalibToolGUI::Impl
 
 		stereoCapture.entry( StereoCaptureMessage::Initialize( 2, 1 ) );
 
-		ui.StoreButton->connectPressed( [](){ std::cout << "Push!" << std::endl; } );
+		ui.StoreButton->connectPressed( [this](){ 
+			machine.process_event( Machine_::StoreEvent() );
+		} );
 
 		connect( &timer, SIGNAL( timeout() ), base, SLOT( getMessage() ) );
 		timer.start( 10 );
@@ -112,6 +126,18 @@ struct StereoCalibToolGUI::Impl
 		ui.RightImageWidget->setImage( rightImage );
 	}
 
+	void findStereoFeatures( const cv::Mat& leftImage, const CornerInfo& leftInfo, const cv::Mat& rightImage, const CornerInfo& rightInfo )
+	{
+		if ( leftInfo.isEnable() && rightInfo.isEnable() ) {
+			if ( *(machine.current_state()) == static_cast<int>(Machine::STATE_ID::STORE_STATE_ID) ) {
+				ui.FeaturesListWidget->addFeatures( leftImage, leftInfo, rightImage, rightInfo );
+			}
+
+			findFeatures( leftImage, leftInfo, ui.LeftFeatureImageWidget );
+			findFeatures( rightImage, rightInfo, ui.RightFeatureImageWidget );
+		}
+	}
+
 	void findFeatures( const cv::Mat& image, CornerInfo info, ImageFitWidget* widget )
 	{
 		cv::Mat canvas = image.clone();
@@ -125,6 +151,8 @@ StereoCalibToolGUI::StereoCalibToolGUI(QWidget *parent)
 	, mImpl(new StereoCalibToolGUI::Impl(this))
 {
 	std::cout << "Run" << std::endl;
+	
+	mImpl->machine.start();
 }
 
 StereoCalibToolGUI::~StereoCalibToolGUI()

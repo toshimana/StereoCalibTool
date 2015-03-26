@@ -15,7 +15,7 @@ typedef std::shared_ptr<CornerInfo> SpCornerInfo;
 static void 
 findCorner( const cv::Mat& image, SpCornerInfo& info )
 {
-	cv::Size patternSize( 12, 8 );
+	cv::Size patternSize( 13, 8 );
 	cv::Mat grayImage;
 	cvtool::cvtColor2Gray( image, grayImage );
 	
