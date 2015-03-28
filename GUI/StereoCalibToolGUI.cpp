@@ -36,30 +36,39 @@ struct StereoCalibToolGUI::Impl
 		Machine_( StereoCalibToolGUI* obj ) :base( obj ){}
 
 		// State
-		struct CaptureState : boost::msm::front::state < > {
-			template <class Event, class Fsm>
-			void on_entry( Event const& evt, Fsm& fsm )
-			{
-				fsm.base->mImpl->ui.StoreButton->setText( "Store" );
-			}
-		};
+		struct CaptureState : boost::msm::front::state < > {};
 		struct StoreState   : boost::msm::front::state < > {
 			template <class Event, class Fsm>
 			void on_entry( Event const& evt, Fsm& fsm )
 			{
 				fsm.base->mImpl->ui.StoreButton->setText( "Stop" );
+				fsm.base->mImpl->ui.CalibrateButton->setEnabled( false );
+			}
+
+			template <class Event, class Fsm>
+			void on_exit( Event const& evt, Fsm& fsm )
+			{
+				fsm.base->mImpl->ui.StoreButton->setText( "Store" );
+				fsm.base->mImpl->ui.CalibrateButton->setEnabled( true );
 			}
 		};
+		struct CalibrateState : boost::msm::front::state < > {};
 
 		// Event
 		struct StoreEvent{};
+		struct CalibrateEvent{};
 
 		// Function
+		bool on_calibrate( const CalibrateEvent& msg )
+		{
+			return false;
+		}
 
 		// Transition
 		struct transition_table : boost::mpl::vector <
 			_row < CaptureState, StoreEvent, StoreState   >,
-			_row < StoreState,   StoreEvent, CaptureState >
+			_row < StoreState,   StoreEvent, CaptureState >,
+			g_row< CaptureState, CalibrateEvent, CalibrateState, &on_calibrate >
 		> {};
 
 		enum STATE_ID {
@@ -108,7 +117,11 @@ struct StereoCalibToolGUI::Impl
 		stereoCapture.entry( StereoCaptureMessage::Initialize( 2, 1 ) );
 
 		ui.StoreButton->connectPressed( [this](){ 
-			machine.process_event( Machine_::StoreEvent() );
+			machine.process_event( Machine::StoreEvent() );
+		} );
+
+		ui.CalibrateButton->connectPressed( [this](){
+			machine.process_event( Machine::CalibrateEvent() );
 		} );
 
 		connect( &timer, SIGNAL( timeout() ), base, SLOT( getMessage() ) );

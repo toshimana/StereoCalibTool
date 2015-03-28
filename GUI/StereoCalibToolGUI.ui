@@ -37,6 +37,13 @@
             </property>
            </widget>
           </item>
+          <item>
+           <widget class="ObservedPushButton" name="CalibrateButton">
+            <property name="text">
+             <string>Calibrate</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </item>
        </layout>
