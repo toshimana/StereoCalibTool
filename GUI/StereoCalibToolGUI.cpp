@@ -8,11 +8,13 @@
 
 #include <boost/msm/front/state_machine_def.hpp>
 #include <boost/msm/back/state_machine.hpp>
+#include <boost/format.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 
 
 #include "StereoCaptureActor.h"
 #include "FindStereoFeaturesActor.h"
+#include "StereoCalibActor.h"
 #include <MainActor.hpp>
 
 #include "WaitSync.hpp"
@@ -26,9 +28,14 @@ struct StereoCalibToolGUI::Impl
 
 	Ui::ReconstClass ui;
 	MainActor mActor;
+
 	StereoCaptureActor stereoCapture;
+
 	FindStereoFeaturesActor findStereoFeaturesActor;
 	WaitSync<bool, StereoMat> waitFSFA;
+
+	StereoCalibActor stereoCalibActor;
+
 	QTimer timer;
 
 	struct Machine_ : boost::msm::front::state_machine_def < Machine_ >
@@ -52,15 +59,43 @@ struct StereoCalibToolGUI::Impl
 				fsm.base->mImpl->ui.CalibrateButton->setEnabled( true );
 			}
 		};
-		struct CalibrateState : boost::msm::front::state < > {};
+		struct CalibrateState : boost::msm::front::state < > {
+			template <class Event, class Fsm>
+			void on_entry( Event const& evt, Fsm& fsm )
+			{
+				fsm.base->mImpl->ui.StoreButton->setEnabled( false );
+				fsm.base->mImpl->ui.CalibrateButton->setEnabled( false );
+			}
+			template <class Event, class Fsm>
+			void on_exit( Event const& evt, Fsm& fsm )
+			{
+				fsm.base->mImpl->ui.StoreButton->setEnabled( true );
+				fsm.base->mImpl->ui.CalibrateButton->setEnabled( true );
+			}
+		};
 
 		// Event
 		struct StoreEvent{};
 		struct CalibrateEvent{};
+		struct CalibFinishEvent{};
 
 		// Function
 		bool on_calibrate( const CalibrateEvent& msg )
 		{
+			ImageListWidget::SpPoints3f objectPoints;
+			ImageListWidget::SpPoints2f leftImagePoints, rightImagePoints;
+			cv::Size imageSize;
+			base->mImpl->ui.FeaturesListWidget->getFeatures( objectPoints, leftImagePoints, rightImagePoints, imageSize );
+
+			base->mImpl->stereoCalibActor.entry( StereoCalibMessage::Calibrate( objectPoints, leftImagePoints, rightImagePoints, imageSize, 
+				[this](double err){
+				this->base->mImpl->mActor.entry( MainActorMessage::ExecFunc( [this,err]() {
+					std::string msg = (boost::format( "Reproject Error : %d" ) % err).str();
+					this->base->statusBar()->showMessage( msg.c_str() );
+					this->base->mImpl->machine.process_event( Machine::CalibFinishEvent() );
+				} ) );
+			} ) );
+
 			return false;
 		}
 
@@ -68,7 +103,8 @@ struct StereoCalibToolGUI::Impl
 		struct transition_table : boost::mpl::vector <
 			_row < CaptureState, StoreEvent, StoreState   >,
 			_row < StoreState,   StoreEvent, CaptureState >,
-			g_row< CaptureState, CalibrateEvent, CalibrateState, &on_calibrate >
+			g_row< CaptureState, CalibrateEvent, CalibrateState, &on_calibrate >,
+			_row < CalibrateState, CalibFinishEvent, CaptureState >
 		> {};
 
 		enum STATE_ID {
