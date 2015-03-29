@@ -65,10 +65,14 @@ struct StereoCalibToolGUI::Impl
 			{
 				fsm.base->mImpl->ui.StoreButton->setEnabled( false );
 				fsm.base->mImpl->ui.CalibrateButton->setEnabled( false );
+				fsm.base->mImpl->findStereoFeaturesActor.entry( FindStereoFeaturesMessage::Finalize() );
 			}
+
 			template <class Event, class Fsm>
 			void on_exit( Event const& evt, Fsm& fsm )
 			{
+				fsm.base->mImpl->findStereoFeaturesActor.entry( FindStereoFeaturesMessage::Initialize() );
+				fsm.base->mImpl->waitFSFA.setFirst( true );
 				fsm.base->mImpl->ui.StoreButton->setEnabled( true );
 				fsm.base->mImpl->ui.CalibrateButton->setEnabled( true );
 			}
@@ -96,7 +100,7 @@ struct StereoCalibToolGUI::Impl
 				} ) );
 			} ) );
 
-			return false;
+			return true;
 		}
 
 		// Transition
@@ -151,6 +155,7 @@ struct StereoCalibToolGUI::Impl
 		} );
 
 		stereoCapture.entry( StereoCaptureMessage::Initialize( 2, 1 ) );
+		findStereoFeaturesActor.entry( FindStereoFeaturesMessage::Initialize() );
 
 		ui.StoreButton->connectPressed( [this](){ 
 			machine.process_event( Machine::StoreEvent() );

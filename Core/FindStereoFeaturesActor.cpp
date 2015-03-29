@@ -39,9 +39,9 @@ struct FindStereoFeaturesActor::Impl
 		Machine_(FindStereoFeaturesActor* obj):base(obj){}
 
 		// State
+		struct HaltState : boost::msm::front::state < > {};
 		struct WaitState : boost::msm::front::state < > {};
 		struct ProcState : boost::msm::front::state < > {};
-		struct HaltState : boost::msm::front::state < > {};
 
 		// Function
 		void on_find( const FindStereoFeaturesMessage::Find& msg )
@@ -71,13 +71,20 @@ struct FindStereoFeaturesActor::Impl
 
 		// Transition
 		struct transition_table : boost::mpl::vector<
+			 _row < HaltState, FindStereoFeaturesMessage::Initialize, WaitState>,
 			a_row < WaitState, FindStereoFeaturesMessage::Find,       ProcState, &on_find >,
 			a_row < ProcState, FindStereoFeaturesMessage::Calculated, WaitState, &on_calculated>,
 			 _row < WaitState, FindStereoFeaturesMessage::Finalize,   HaltState>,
 			 _row < ProcState, FindStereoFeaturesMessage::Finalize,   HaltState>
 			> {};
 
-		typedef WaitState initial_state;
+		enum StateID {
+			HALT_STATE_ID = 0,
+			WAIT_STATE_ID,
+			PROC_STATE_ID,
+		};
+
+		typedef HaltState initial_state;
 
 	protected:
 		template <class FSM, class Event>
@@ -137,7 +144,7 @@ void
 FindStereoFeaturesActor::finalize( void )
 {
 	entry( FindStereoFeaturesMessage::Finalize() );
-	while ( *getState() != 2 ) {
+	while ( *getState() != Impl::Machine::StateID::HALT_STATE_ID ) {
 		boost::this_thread::sleep_for( boost::chrono::milliseconds( 1 ) );
 	}
 }
