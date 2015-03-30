@@ -4,7 +4,9 @@
 #include <iostream>
 
 #include <Qtimer>
+#include <QFileDialog>
 #include <QDebug>
+
 
 #include <boost/msm/front/state_machine_def.hpp>
 #include <boost/msm/back/state_machine.hpp>
@@ -20,6 +22,8 @@
 #include "WaitSync.hpp"
 #include "CornerInfo.h"
 #include "StereoCameraParam.hpp"
+
+#include "qtsjis.hpp"
 
 struct StereoCalibToolGUI::Impl
 {
@@ -38,6 +42,13 @@ struct StereoCalibToolGUI::Impl
 	StereoCalibActor stereoCalibActor;
 
 	QTimer timer;
+
+	SpStereoCameraParam stereoCameraParam;
+	void setStereoCameraParam( SpStereoCameraParam p ){ 
+		stereoCameraParam = p; 
+		if ( p ) ui.SaveParamButton->setEnabled( true );
+		else     ui.SaveParamButton->setEnabled( false );
+	}
 
 	struct Machine_ : boost::msm::front::state_machine_def < Machine_ >
 	{
@@ -97,6 +108,7 @@ struct StereoCalibToolGUI::Impl
 				this->base->mImpl->mActor.entry( MainActorMessage::ExecFunc( [this,p]() {
 					std::string msg = (boost::format( "Reproject Error : %d" ) % p->err).str();
 					this->base->statusBar()->showMessage( msg.c_str() );
+					this->base->mImpl->setStereoCameraParam( p );
 					this->base->mImpl->machine.process_event( Machine::CalibFinishEvent() );
 				} ) );
 			} ) );
@@ -164,6 +176,12 @@ struct StereoCalibToolGUI::Impl
 
 		ui.CalibrateButton->connectPressed( [this](){
 			machine.process_event( Machine::CalibrateEvent() );
+		} );
+
+		ui.SaveParamButton->connectPressed( [this](){
+			QString filePath = QFileDialog::getSaveFileName( this->base, QString(), QString(), tr( "XML File (*.xml)" ) );
+
+			this->stereoCameraParam->write( qtsjis::toString( filePath ) );
 		} );
 
 		connect( &timer, SIGNAL( timeout() ), base, SLOT( getMessage() ) );

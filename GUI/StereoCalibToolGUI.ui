@@ -44,6 +44,16 @@
             </property>
            </widget>
           </item>
+          <item>
+           <widget class="ObservedPushButton" name="SaveParamButton">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>SaveParam</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </item>
        </layout>
