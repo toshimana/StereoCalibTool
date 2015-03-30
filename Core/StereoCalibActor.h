@@ -6,6 +6,7 @@
 
 #include <Actor.hpp>
 #include "CornerInfo.h"
+#include "StereoCameraParam.hpp"
 
 namespace StereoCalibMessage
 {
@@ -16,14 +17,14 @@ namespace StereoCalibMessage
 		typedef std::shared_ptr<Points3f> SpPoints3f;
 		typedef std::shared_ptr<Points2f> SpPoints2f;
 
-		Calibrate( SpPoints3f op, SpPoints2f lip, SpPoints2f rip, cv::Size is, std::function<void(double)> func )
+		Calibrate( SpPoints3f op, SpPoints2f lip, SpPoints2f rip, cv::Size is, std::function<void(SpStereoCameraParam)> func )
 			: objectPoints( op ), leftImagePoints( lip ), rightImagePoints( rip ), imageSize( is ), deligate( func ){}
 
 		SpPoints3f objectPoints;
 		SpPoints2f leftImagePoints;
 		SpPoints2f rightImagePoints;
 		cv::Size   imageSize;
-		std::function<void( double )> deligate;
+		std::function<void( SpStereoCameraParam )> deligate;
 	};
 
 	typedef boost::variant<Calibrate> Message;

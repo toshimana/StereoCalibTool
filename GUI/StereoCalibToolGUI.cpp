@@ -19,6 +19,7 @@
 
 #include "WaitSync.hpp"
 #include "CornerInfo.h"
+#include "StereoCameraParam.hpp"
 
 struct StereoCalibToolGUI::Impl
 {
@@ -92,9 +93,9 @@ struct StereoCalibToolGUI::Impl
 			base->mImpl->ui.FeaturesListWidget->getFeatures( objectPoints, leftImagePoints, rightImagePoints, imageSize );
 
 			base->mImpl->stereoCalibActor.entry( StereoCalibMessage::Calibrate( objectPoints, leftImagePoints, rightImagePoints, imageSize, 
-				[this](double err){
-				this->base->mImpl->mActor.entry( MainActorMessage::ExecFunc( [this,err]() {
-					std::string msg = (boost::format( "Reproject Error : %d" ) % err).str();
+				[this](SpStereoCameraParam p){
+				this->base->mImpl->mActor.entry( MainActorMessage::ExecFunc( [this,p]() {
+					std::string msg = (boost::format( "Reproject Error : %d" ) % p->err).str();
 					this->base->statusBar()->showMessage( msg.c_str() );
 					this->base->mImpl->machine.process_event( Machine::CalibFinishEvent() );
 				} ) );

@@ -30,8 +30,7 @@ struct StereoCalibActor::Impl
 
 			MeasureTime cTime( "Calib" );
 
-			cv::Mat lCameraMatrix, lDistCoeffs;
-			cv::Mat rCameraMatrix, rDistCoeffs;
+			SpStereoCameraParam p = std::make_shared<StereoCameraParam>();
 
 #pragma omp parallel
 #pragma omp sections
@@ -40,34 +39,25 @@ struct StereoCalibActor::Impl
 {
 	MeasureTime lTime( "Left" );
 	std::vector<cv::Mat> lrvecs, ltvecs;
-	cv::calibrateCamera( *(msg.objectPoints), *(msg.leftImagePoints), msg.imageSize, lCameraMatrix, lDistCoeffs, lrvecs, ltvecs );
+	cv::calibrateCamera( *(msg.objectPoints), *(msg.leftImagePoints), msg.imageSize, p->lCameraMatrix, p->lDistCoeffs, lrvecs, ltvecs );
 }
 #pragma omp section
 {
 	MeasureTime rTime( "Right" );
 	std::vector<cv::Mat> rrvecs, rtvecs;
-	cv::calibrateCamera( *(msg.objectPoints), *(msg.rightImagePoints), msg.imageSize, rCameraMatrix, rDistCoeffs, rrvecs, rtvecs );
+	cv::calibrateCamera( *(msg.objectPoints), *(msg.rightImagePoints), msg.imageSize, p->rCameraMatrix, p->rDistCoeffs, rrvecs, rtvecs );
 }
 			}
 
-			std::cout << lCameraMatrix << std::endl;
-			std::cout << lDistCoeffs << std::endl;
-			std::cout << rCameraMatrix << std::endl;
-			std::cout << rDistCoeffs << std::endl;
-
-			cv::Mat R, T, E, F;
-			double err;
+			cv::Mat E, F;
 			{
 				MeasureTime sTime( "Stereo" );
-				err = cv::stereoCalibrate( *(msg.objectPoints), *(msg.leftImagePoints), *(msg.rightImagePoints),
-					lCameraMatrix, lDistCoeffs, rCameraMatrix, rDistCoeffs, msg.imageSize, R, T, E, F,
+				p->err = cv::stereoCalibrate( *(msg.objectPoints), *(msg.leftImagePoints), *(msg.rightImagePoints),
+					p->lCameraMatrix, p->lDistCoeffs, p->rCameraMatrix, p->rDistCoeffs, msg.imageSize, p->R, p->T, E, F,
 					cv::CALIB_FIX_INTRINSIC );
 			}
 
-			std::cout << R << std::endl;
-			std::cout << T << std::endl;
-
-			msg.deligate( err );
+			msg.deligate( p );
 		}
 	private:
 		StereoCalibActor* base;
